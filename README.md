@@ -1,6 +1,6 @@
 # manyshape-examples
 
-An example app on [Manyshape](https://github.com/Them-labs/manyshape): one app (Mail) shipped as a **capability contract**, a **runtime** that hosts AI-generated interfaces in a capability sandbox, and an **embedded agent** that compiles a personal surface from your intent. Surfaces can be **vanilla or React** (`framework: react` in the header; JSX is transpiled server-side, the runtime injects a ~25KB Preact-compat bundle into the same sandbox).
+An example app on [Manyshape](https://github.com/Them-labs): one app (Mail) shipped as a **capability contract**, a **runtime** that hosts AI-generated interfaces in a capability sandbox, and an **embedded agent** that compiles a personal surface from your intent. Surfaces can be **vanilla or React** (`framework: react` in the header; JSX is transpiled server-side, the runtime injects a ~25KB Preact-compat bundle into the same sandbox).
 
 ## Run
 
