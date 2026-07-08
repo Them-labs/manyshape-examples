@@ -1,0 +1,94 @@
+<!--surface
+name: task-board
+caps: mail.query, mail.archive, mail.snooze
+intent: Inbox as a task board - columns for awaiting reply, to answer, done today; archiving completes a task; snooze pushes it back.
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--page);
+    color: var(--ink);
+    padding: 20px;
+    font-size: 13.5px;
+  }
+  h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 14px; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+  .col h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 500; margin-bottom: 10px;
+    display: flex; justify-content: space-between;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 11px 13px;
+    margin-bottom: 8px;
+  }
+  .card .from { font-weight: 500; font-size: 12.5px; }
+  .card .subj { color: var(--inkSoft); font-size: 12.5px; margin: 2px 0 8px; }
+  .card .meta { display: flex; justify-content: space-between; align-items: center; }
+  .age { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .age.stale { color: #c0662a; font-weight: 500; }
+  .btns { display: flex; gap: 5px; }
+  button {
+    font-family: var(--font); font-size: 11px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer;
+  }
+  button:hover { border-color: var(--violet); }
+  .done-col .card { opacity: 0.55; }
+  .done-col .subj { text-decoration: line-through; }
+  .col.awaiting .card { border-left: 3px solid var(--violet); }
+  .empty { color: var(--muted); font-size: 12px; padding: 10px 2px; }
+</style>
+<h1>Inbox - task board</h1>
+<div class="board">
+  <div class="col awaiting"><h2>Awaiting reply <span id="n1"></span></h2><div id="c1"></div></div>
+  <div class="col"><h2>To answer <span id="n2"></span></h2><div id="c2"></div></div>
+  <div class="col done-col"><h2>Done today <span id="n3"></span></h2><div id="c3"></div></div>
+</div>
+<script>
+  function card(t, done) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    const ageMs = Date.now() - new Date(t.receivedAt).getTime();
+    el.innerHTML =
+      '<div class="from"></div><div class="subj"></div>' +
+      '<div class="meta"><span class="age' + (ageMs > 2 * 86400e3 && !done ? ' stale' : '') + '"></span><span class="btns"></span></div>';
+    el.querySelector('.from').textContent = t.sender;
+    el.querySelector('.subj').textContent = t.subject;
+    el.querySelector('.age').textContent = facet.timeAgo(t.receivedAt);
+    if (!done) {
+      const btns = el.querySelector('.btns');
+      const doneBtn = document.createElement('button');
+      doneBtn.textContent = '✓ Done';
+      doneBtn.onclick = async () => { await facet.cap('mail.archive', { threadId: t.id }); render(); };
+      const laterBtn = document.createElement('button');
+      laterBtn.textContent = 'Later';
+      laterBtn.onclick = async () => {
+        await facet.cap('mail.snooze', { threadId: t.id, until: new Date(Date.now() + 86400e3).toISOString() });
+        render();
+      };
+      btns.append(doneBtn, laterBtn);
+    }
+    return el;
+  }
+  async function render() {
+    const threads = await facet.cap('mail.query', { filter: 'all' });
+    const inbox = threads.filter(t => t.state === 'inbox');
+    const awaiting = inbox.filter(t => t.awaitingReply);
+    const toAnswer = inbox.filter(t => !t.awaitingReply);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const done = threads.filter(t => t.state === 'archived');
+    for (const [colId, nId, items, isDone] of [['c1','n1',awaiting,false],['c2','n2',toAnswer,false],['c3','n3',done,true]]) {
+      const col = document.getElementById(colId);
+      document.getElementById(nId).textContent = items.length;
+      col.innerHTML = '';
+      if (!items.length) col.innerHTML = '<div class="empty">-</div>';
+      for (const t of items) col.appendChild(card(t, isDone));
+    }
+  }
+  render();
+</script>

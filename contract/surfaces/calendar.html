@@ -1,0 +1,88 @@
+<!--surface
+name: events-calendar
+caps: mail.query, mail.archive
+intent: Inbox as an events calendar - emails with event dates become calendar entries grouped by day; everything else collapses into a small "other mail" tray.
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--page);
+    color: var(--ink);
+    padding: 20px;
+    font-size: 13.5px;
+  }
+  h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 14px; }
+  .day { display: grid; grid-template-columns: 64px 1fr; gap: 12px; margin-bottom: 12px; }
+  .date { color: var(--muted); font-size: 12px; padding-top: 9px; font-variant-numeric: tabular-nums; }
+  .events { display: grid; gap: 7px; }
+  .event {
+    border-radius: var(--radius);
+    padding: 9px 13px;
+    border: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .event .t { font-weight: 500; font-size: 12.5px; }
+  .event .s { color: var(--inkSoft); font-size: 11.5px; }
+  .e0 { background: var(--lilac); } .e1 { background: var(--mint); } .e2 { background: var(--cream); }
+  .tray { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .tray h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
+  .mini { display: flex; gap: 8px; align-items: center; color: var(--inkSoft); font-size: 12px; padding: 4px 0; }
+  .mini b { color: var(--ink); font-weight: 500; }
+  button {
+    font-family: var(--font); font-size: 11px;
+    border: 1px solid rgba(33,27,36,0.15); background: rgba(255,255,255,0.6); color: var(--ink);
+    border-radius: 999px; padding: 3px 10px; cursor: pointer; flex-shrink: 0;
+  }
+  .empty { color: var(--muted); }
+</style>
+<h1>Mail - events view</h1>
+<div id="cal"></div>
+<div class="tray"><h2>Other mail</h2><div id="tray"></div></div>
+<script>
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  async function render() {
+    const threads = await facet.cap('mail.query', { filter: 'inbox' });
+    const events = threads.filter(t => t.eventDate).sort((a, b) => a.eventDate.localeCompare(b.eventDate));
+    const rest = threads.filter(t => !t.eventDate);
+    const cal = document.getElementById('cal');
+    cal.innerHTML = '';
+    if (!events.length) cal.innerHTML = '<div class="empty">No upcoming events in your mail.</div>';
+    const byDay = {};
+    for (const t of events) (byDay[t.eventDate.slice(0, 10)] ||= []).push(t);
+    let i = 0;
+    for (const [day, items] of Object.entries(byDay)) {
+      const d = new Date(day + 'T12:00:00');
+      const row = document.createElement('div');
+      row.className = 'day';
+      row.innerHTML = '<div class="date"></div><div class="events"></div>';
+      row.querySelector('.date').textContent = DAYS[d.getDay()] + ' ' + d.getDate();
+      const box = row.querySelector('.events');
+      for (const t of items) {
+        const ev = document.createElement('div');
+        ev.className = 'event e' + (i++ % 3);
+        const time = new Date(t.eventDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        ev.innerHTML = '<div><div class="t"></div><div class="s"></div></div>';
+        ev.querySelector('.t').textContent = t.subject;
+        ev.querySelector('.s').textContent = t.sender + ' · ' + time;
+        const done = document.createElement('button');
+        done.textContent = 'Handled';
+        done.onclick = async () => { await facet.cap('mail.archive', { threadId: t.id }); render(); };
+        ev.appendChild(done);
+        box.appendChild(ev);
+      }
+      cal.appendChild(row);
+    }
+    const tray = document.getElementById('tray');
+    tray.innerHTML = rest.length ? '' : '<div class="empty">-</div>';
+    for (const t of rest) {
+      const m = document.createElement('div');
+      m.className = 'mini';
+      m.innerHTML = '<b></b><span></span>';
+      m.querySelector('b').textContent = t.sender;
+      m.querySelector('span').textContent = t.subject;
+      tray.appendChild(m);
+    }
+  }
+  render();
+</script>

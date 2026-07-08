@@ -1,0 +1,103 @@
+{
+  "id": "mail-app",
+  "name": "Mail",
+  "version": "1.0.0",
+  "docs": "A minimal email app. Threads live in the authority plane; surfaces may only touch them through the declared capabilities. Thread.state is one of inbox | archived | snoozed. awaitingReply=true means the last message in the thread is from the other party and the user has not responded.",
+  "schemas": {
+    "thread": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string" },
+        "subject": { "type": "string" },
+        "snippet": { "type": "string" },
+        "receivedAt": { "type": "string", "format": "date-time" },
+        "eventDate": { "type": ["string", "null"], "format": "date-time", "description": "Set when the email is about a schedulable event" },
+        "category": { "type": "string", "description": "Heuristic category: work | legal | recruiting | club | class | career | promo" },
+        "state": { "type": "string", "enum": ["inbox", "archived", "snoozed"] },
+        "awaitingReply": { "type": "boolean" },
+        "snoozedUntil": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "capabilities": [
+    {
+      "id": "mail.query",
+      "input": { "filter": "optional: inbox | archived | snoozed | awaiting_reply | all" },
+      "output": "thread[]",
+      "risk": "read",
+      "gesture": false,
+      "docs": "List the user's threads. Default filter is all."
+    },
+    {
+      "id": "mail.archive",
+      "input": { "threadId": "string" },
+      "output": "{ ok: boolean }",
+      "risk": "reversible",
+      "gesture": false,
+      "docs": "Move a thread out of the inbox. Inverse: mail.unarchive."
+    },
+    {
+      "id": "mail.unarchive",
+      "input": { "threadId": "string" },
+      "output": "{ ok: boolean }",
+      "risk": "reversible",
+      "gesture": false,
+      "docs": "Return an archived thread to the inbox."
+    },
+    {
+      "id": "mail.snooze",
+      "input": { "threadId": "string", "until": "ISO date-time string" },
+      "output": "{ ok: boolean }",
+      "risk": "reversible",
+      "gesture": false,
+      "docs": "Hide a thread until the given time, then it returns to the inbox."
+    },
+    {
+      "id": "mail.send",
+      "input": { "threadId": "string", "body": "string" },
+      "output": "{ ok: boolean }",
+      "risk": "external",
+      "gesture": true,
+      "docs": "Reply to a thread. External side effect: requires a fresh user gesture; the authority plane rejects programmatic calls."
+    }
+  ],
+  "policies": [
+    {
+      "id": "no-ambient-network",
+      "enforcement": "activation-time",
+      "docs": "Surfaces run under CSP default-src 'none' in a sandboxed iframe. The only I/O is the capability bridge. Generated code containing fetch/XHR/WebSocket/import() is rejected by the gate."
+    },
+    {
+      "id": "declared-caps-only",
+      "enforcement": "activation-time + call-time",
+      "docs": "A surface must declare the capabilities it uses in its header; the bridge refuses any call outside the declared set."
+    },
+    {
+      "id": "external-actions-require-gesture",
+      "enforcement": "call-time",
+      "docs": "Capabilities marked gesture:true (mail.send) are rejected by the authority plane unless invoked within 1500ms of a real user gesture."
+    }
+  ],
+  "conformance": [
+    { "id": "boots", "docs": "The surface must render and make its first successful capability call within 8 seconds, with zero uncaught JS errors." }
+  ],
+  "tokens": {
+    "page": "#f8f7f9",
+    "surface": "#ffffff",
+    "ink": "#211b24",
+    "inkSoft": "#4a4652",
+    "muted": "#666271",
+    "line": "#ecebef",
+    "violet": "#8f74c9",
+    "lavender": "#b98bd8",
+    "peach": "#ffb66d",
+    "aqua": "#75d7d3",
+    "lilac": "#ece3ff",
+    "mint": "#d7f8f3",
+    "cream": "#ffedc9",
+    "blush": "#fbe5ec",
+    "radius": "12px",
+    "font": "\"GT America\", ui-sans-serif, system-ui, sans-serif"
+  }
+}

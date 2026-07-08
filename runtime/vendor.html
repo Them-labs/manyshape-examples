@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mail - vendor app (with Manyshape chat SDK)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✉️</text></svg>">
+  <link rel="manyshape-contract" href="/api/contract" data-cap-base="/api/cap" data-guest-sdk="/guest-sdk.js" data-react-runtime="/react-runtime.js">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: ui-sans-serif, system-ui, sans-serif; background: #f8f7f9; color: #211b24; }
+    .bar { background: #fff; border-bottom: 1px solid #ecebef; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+    .bar b { font-size: 16px; }
+    .bar .tag { font-size: 11.5px; color: #666271; background: #ece3ff; border-radius: 999px; padding: 3px 10px; }
+    .bar a { margin-left: auto; color: #8f74c9; font-size: 13px; text-decoration: none; }
+    .wrap { max-width: 860px; margin: 24px auto; padding: 0 20px; }
+    .note { color: #666271; font-size: 13px; margin-bottom: 14px; }
+    #mail-app { background: #fff; border: 1px solid #ecebef; border-radius: 14px; min-height: 440px; overflow: hidden; }
+    .thread { display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid #f1eff4; font-size: 13.5px; }
+    .thread b { width: 140px; flex-shrink: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .thread .s { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #4a4652; }
+    .thread button { border: 1px solid #ecebef; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <b>✉️ Mail</b>
+    <span class="tag">vendor app · ships a Manyshape contract</span>
+    <a href="/">open the standalone runtime →</a>
+  </header>
+  <div class="wrap">
+    <p class="note">
+      This is the vendor's own product with its own boring interface. The ◈ bubble (bottom right)
+      is the embedded Manyshape chat SDK: sign in, describe what you want, and this app becomes yours.
+    </p>
+    <div id="mail-app"></div>
+  </div>
+
+  <script>
+    // The vendor's own (trusted, first-party) UI - plain fetch to its own API.
+    async function renderVendorMail() {
+      const res = await fetch("/api/cap/mail.query", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-facet-user": "jk" },
+        body: JSON.stringify({ args: { filter: "inbox" } }),
+      });
+      const { data } = await res.json();
+      const root = document.getElementById("mail-app");
+      root.innerHTML = "";
+      for (const t of data) {
+        const row = document.createElement("div");
+        row.className = "thread";
+        row.innerHTML = "<b></b><span class='s'></span><button>Archive</button>";
+        row.querySelector("b").textContent = t.sender;
+        row.querySelector(".s").textContent = `${t.subject} - ${t.snippet}`;
+        row.querySelector("button").onclick = async () => {
+          await fetch("/api/cap/mail.archive", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-facet-user": "jk" },
+            body: JSON.stringify({ args: { threadId: t.id } }),
+          });
+          renderVendorMail();
+        };
+        root.appendChild(row);
+      }
+    }
+    renderVendorMail();
+  </script>
+
+  <script src="/chat-sdk.js"></script>
+  <script>
+    Manyshape.mount({
+      target: "#mail-app",
+      appUser: "jk",
+      platform: location.hostname.endsWith("manyshape.com") ? "https://platform.manyshape.com" : "http://localhost:8600",
+    });
+  </script>
+</body>
+</html>

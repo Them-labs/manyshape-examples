@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manyshape Runtime - Mail</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+  <link rel="manyshape-contract" href="/api/contract" data-cap-base="/api/cap" data-guest-sdk="/guest-sdk.js" data-react-runtime="/react-runtime.js">
+  <link rel="stylesheet" href="/runtime.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand"><span class="mark"></span> Manyshape Runtime</div>
+    <div class="app-id">mail-app <span id="contract-version"></span> · <span class="verified">✓ contract verified</span></div>
+    <div class="spacer"></div>
+    <label class="user-pick">user
+      <select id="user">
+        <option value="jk">jk (founder)</option>
+        <option value="maya">maya (student)</option>
+      </select>
+    </label>
+    <span id="account" class="account"></span>
+    <button id="revert" class="ghost" title="Discard this user's surface and intent spec">Reset to reference</button>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div id="frame-host"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-section">
+        <h2>Describe what you want</h2>
+        <form id="intent-form">
+          <textarea id="intent" rows="3" placeholder="e.g. I live in my inbox. Make it a task board where archiving a thread completes it."></textarea>
+          <button class="primary" id="go" type="submit">Rebuild my interface</button>
+        </form>
+        <div id="agent-status" class="status"></div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Intent spec <span class="hint">· the durable artifact</span></h2>
+        <ol id="intent-spec" class="spec"></ol>
+        <div id="spec-empty" class="empty">No customizations yet. You're on the vendor's reference surface.</div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Cloud experiences <span class="hint">· synced to your account</span></h2>
+        <div id="exp-list" class="exp-list"></div>
+        <div id="exp-empty" class="empty">Sign in (top right) to save and sync experiences across the runtime, the chat SDK, and the browser extension.</div>
+      </div>
+
+      <div class="panel-section">
+        <h2>Activation gate</h2>
+        <ul id="gate" class="gate">
+          <li data-step="parse">header &amp; declared caps</li>
+          <li data-step="caps">caps ⊆ contract</li>
+          <li data-step="static">static policy scan (no ambient I/O)</li>
+          <li data-step="conformance">conformance: boots &amp; first cap call</li>
+        </ul>
+      </div>
+
+      <div class="panel-section">
+        <h2>Audit log</h2>
+        <ul id="audit" class="audit"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/runtime.js"></script>
+</body>
+</html>
