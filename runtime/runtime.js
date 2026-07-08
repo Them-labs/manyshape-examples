@@ -13,6 +13,9 @@ let referenceSurface = "";
 let guestSdk = "";
 let reactRuntime = ""; // lazily fetched Preact+compat bundle for framework: react
 let currentUser = "jk";
+// Two demos in one: ?fw=react forces React surfaces, else vanilla. Stored
+// per framework so the two demos keep separate saved surfaces.
+const framework = new URLSearchParams(location.search).get("fw") === "react" ? "react" : "vanilla";
 
 // ------------------------------------------------------- platform account
 // One Manyshape account, three doorways (runtime, chat SDK, extension). The
@@ -50,7 +53,7 @@ let pendingStage = null;
 
 const $ = (id) => document.getElementById(id);
 const store = {
-  key: (u) => `facet:mail-app:${u}`,
+  key: (u) => `facet:mail-app:${framework}:${u}`,
   load(u) {
     try { return JSON.parse(localStorage.getItem(this.key(u))) ?? { intents: [], surface: null }; }
     catch { return { intents: [], surface: null }; }
@@ -227,14 +230,20 @@ function setStatus(text, cls = "") {
 async function showUserSurface() {
   const { surface } = store.load(currentUser);
   renderSpec();
+  // Fresh React demo opens on a React starter so the framework is visible immediately.
+  let initial = surface;
+  if (!initial) {
+    initial = framework === "react" ? (reactStarter ??= await (await fetch("/api/starter/react")).json().then((j) => j.surface)) : referenceSurface;
+  }
   try {
-    const { meta } = await activate(surface ?? referenceSurface);
+    const { meta } = await activate(initial);
     audit(`activated <b>${meta.name}</b> [${meta.framework}] for <b>${currentUser}</b> - caps: ${meta.caps.join(", ")}`);
   } catch (err) {
     audit(`activation failed: ${err.message}. Reverting to reference`);
     await activate(referenceSurface).catch(() => {});
   }
 }
+let reactStarter = null;
 
 async function generateSurface(state) {
   // Signed in: the platform's hosted agent (your account, your quota).
@@ -242,7 +251,7 @@ async function generateSurface(state) {
     try {
       const { surface, source } = await platformApi("/api/agent", {
         method: "POST",
-        body: JSON.stringify({ contract, referenceSurface, currentSurface: state.surface, intents: state.intents }),
+        body: JSON.stringify({ contract, referenceSurface, currentSurface: state.surface, intents: state.intents, framework }),
       });
       return { surface, source: `${source} · platform` };
     } catch (err) {
@@ -253,7 +262,7 @@ async function generateSurface(state) {
   const res = await fetch("/api/agent", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ user: currentUser, intents: state.intents, currentSurface: state.surface }),
+    body: JSON.stringify({ user: currentUser, intents: state.intents, currentSurface: state.surface, framework }),
   });
   return await res.json();
 }
@@ -399,6 +408,7 @@ async function boot() {
   ({ contract, referenceSurface } = await contractRes.json());
   guestSdk = await sdkRes.text();
   $("contract-version").textContent = `v${contract.version}`;
+  document.querySelectorAll(".fw-toggle a").forEach((a) => a.classList.toggle("on", a.dataset.fw === framework));
 
   $("user").addEventListener("change", async (e) => {
     currentUser = e.target.value;

@@ -1,0 +1,87 @@
+<!--surface
+name: task-board-react
+caps: mail.query, mail.archive, mail.snooze
+framework: react
+intent: Inbox as a task board (React) - columns for awaiting reply, to answer, done today; archiving completes a task; snooze pushes it back.
+-->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font); background: var(--page); color: var(--ink); padding: 20px; font-size: 13.5px; }
+  h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 14px; }
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: start; }
+  .col h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); font-weight: 500; margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 13px; margin-bottom: 8px; }
+  .card .from { font-weight: 500; font-size: 12.5px; }
+  .card .subj { color: var(--inkSoft); font-size: 12.5px; margin: 2px 0 8px; }
+  .card .meta { display: flex; justify-content: space-between; align-items: center; }
+  .age { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .age.stale { color: #c0662a; font-weight: 500; }
+  .btns { display: flex; gap: 5px; }
+  button { font-family: var(--font); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+  button:hover { border-color: var(--violet); }
+  .done-col .card { opacity: 0.55; }
+  .done-col .subj { text-decoration: line-through; }
+  .col.awaiting .card { border-left: 3px solid var(--violet); }
+  .empty { color: var(--muted); font-size: 12px; padding: 10px 2px; }
+  .badge { font-family: var(--mono); font-size: 10px; color: var(--violet); background: var(--lilac); border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: 2px; }
+</style>
+<div id="root"></div>
+<script type="text/jsx">
+  const { useState } = React;
+
+  function Card({ t, done, onDone, onLater }) {
+    const ageMs = Date.now() - new Date(t.receivedAt).getTime();
+    const stale = ageMs > 2 * 86400e3 && !done;
+    return (
+      <div className="card">
+        <div className="from">{t.sender}</div>
+        <div className="subj">{t.subject}</div>
+        <div className="meta">
+          <span className={"age" + (stale ? " stale" : "")}>{facet.timeAgo(t.receivedAt)}</span>
+          {!done && (
+            <span className="btns">
+              <button onClick={() => onDone(t)}>✓ Done</button>
+              <button onClick={() => onLater(t)}>Later</button>
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function Column({ title, items, done, onDone, onLater }) {
+    return (
+      <div className={"col" + (title === "Awaiting reply" ? " awaiting" : "") + (done ? " done-col" : "")}>
+        <h2>{title} <span>{items.length}</span></h2>
+        {items.length === 0 && <div className="empty">—</div>}
+        {items.map((t) => <Card key={t.id} t={t} done={done} onDone={onDone} onLater={onLater} />)}
+      </div>
+    );
+  }
+
+  function App() {
+    const [threads, refresh] = useCap("mail.query", { filter: "all" });
+    if (!threads) return <p className="empty">Loading…</p>;
+
+    const inbox = threads.filter((t) => t.state === "inbox");
+    const awaiting = inbox.filter((t) => t.awaitingReply);
+    const toAnswer = inbox.filter((t) => !t.awaitingReply);
+    const doneToday = threads.filter((t) => t.state === "archived");
+
+    const onDone = async (t) => { await facet.cap("mail.archive", { threadId: t.id }); refresh(); };
+    const onLater = async (t) => { await facet.cap("mail.snooze", { threadId: t.id, until: new Date(Date.now() + 86400e3).toISOString() }); refresh(); };
+
+    return (
+      <div>
+        <h1>Inbox — task board <span className="badge">React</span></h1>
+        <div className="board">
+          <Column title="Awaiting reply" items={awaiting} onDone={onDone} onLater={onLater} />
+          <Column title="To answer" items={toAnswer} onDone={onDone} onLater={onLater} />
+          <Column title="Done today" items={doneToday} done />
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.render(<App />, document.getElementById("root"));
+</script>

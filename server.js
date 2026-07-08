@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 import { MongoClient } from "mongodb";
-import { createAgent } from "@manyshape/agent";
+import { createAgent, finalizeSurface } from "@manyshape/agent";
 import { validateContract, createAuthorityRouter, CapError } from "@manyshape/sdk";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +37,9 @@ const referenceSurface = fs.readFileSync(path.join(here, "contract/reference-sur
 const fallbackSurfaces = {
   kanban: fs.readFileSync(path.join(here, "contract/surfaces/kanban.html"), "utf8"),
   calendar: fs.readFileSync(path.join(here, "contract/surfaces/calendar.html"), "utf8"),
+  // Transpile the React surface's JSX at load - the browser can't run
+  // <script type="text/jsx"> directly (the agent path does this per-generation).
+  kanbanReact: finalizeSurface(fs.readFileSync(path.join(here, "contract/surfaces/kanban-react.html"), "utf8")),
 };
 
 // In-sandbox SDK assets: the vanilla guest SDK, and the React runtime
@@ -151,32 +154,39 @@ const agent = createAgent();
 const agentModel = agent?.model ?? null;
 
 app.post("/api/agent", async (req, res) => {
-  const { user, intents, currentSurface } = req.body ?? {};
+  const { user, intents, currentSurface, framework } = req.body ?? {};
   if (!Array.isArray(intents) || intents.length === 0) {
     return res.status(400).json({ error: "intents[] required" });
   }
 
   if (!agentModel) {
-    const surface = pickFallback(intents);
+    const surface = pickFallback(intents, framework);
     return res.json({ surface, source: "fallback", note: "No GEMINI_API_KEY or ANTHROPIC_API_KEY set - served a canned surface matched by keyword." });
   }
 
   try {
-    const surface = await agent.generate({ contract, referenceSurface, currentSurface, intents, user });
+    const surface = await agent.generate({ contract, referenceSurface, currentSurface, intents, user, framework });
     return res.json({ surface, source: agentModel });
   } catch (err) {
     console.error("agent error:", err.message);
-    const surface = pickFallback(intents);
+    const surface = pickFallback(intents, framework);
     return res.json({ surface, source: "fallback", note: `Agent call failed (${err.message}) - served a canned surface.` });
   }
 });
 
-function pickFallback(intents) {
+function pickFallback(intents, framework) {
   const text = intents.join(" ").toLowerCase();
+  // React demo: always return a React surface so the framework is visible offline.
+  if (framework === "react") return fallbackSurfaces.kanbanReact;
   if (/kanban|task|board|todo|to-do/.test(text)) return fallbackSurfaces.kanban;
   if (/calendar|event|schedule|agenda/.test(text)) return fallbackSurfaces.calendar;
   return referenceSurface;
 }
+
+// Starter surface for a fresh demo, per framework (so the React demo opens on React).
+app.get("/api/starter/:fw", (req, res) => {
+  res.json({ surface: req.params.fw === "react" ? fallbackSurfaces.kanbanReact : referenceSurface });
+});
 
 // ------------------------------------------------------------------ static
 app.use(express.static(path.join(here, "runtime")));

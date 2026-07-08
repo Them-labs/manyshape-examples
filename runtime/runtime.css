@@ -147,3 +147,8 @@ textarea:focus { outline: none; border-color: var(--violet); }
 .exp-list .exp-row b { font-weight: 500; }
 .exp-list .exp-row small { color: #666271; }
 button.small { padding: 4px 12px; font-size: 12px; }
+
+/* framework toggle (Vanilla | React) */
+.fw-toggle { display: inline-flex; background: var(--page, #f8f7f9); border: 1px solid var(--line, #ecebef); border-radius: 999px; padding: 3px; margin-left: 14px; }
+.fw-toggle a { font-size: 12.5px; font-weight: 500; color: #666271; padding: 5px 13px; border-radius: 999px; text-decoration: none; }
+.fw-toggle a.on { background: #fff; color: #211b24; box-shadow: 0 1px 3px rgba(33,27,36,0.14); }
