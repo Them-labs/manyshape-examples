@@ -6,7 +6,7 @@ An example app on [Manyshape](https://github.com/Them-labs/manyshape): one app (
 
 Requires **MongoDB** locally (`brew services start mongodb-community`, or set `MONGODB_URI`). Threads live in db `manyshape-mail`. `RESEED=1 npm start` resets the demo mailboxes.
 
-> Uses the `@manyshape/*` packages ([sdk](https://github.com/Them-labs/manyshape-sdk), [surface-sdk](https://github.com/Them-labs/manyshape-surface-sdk), [chat-sdk](https://github.com/Them-labs/manyshape-chat-sdk), [agent](https://github.com/Them-labs/manyshape-agent)). Until they're published to npm, run this example from the [Manyshape monorepo](https://github.com/Them-labs/manyshape) where the workspace links resolve.
+> Uses the `@manyshape/*` packages ([sdk](https://github.com/Them-labs/manyshape-sdk), [surface-sdk](https://github.com/Them-labs/manyshape-surface-sdk), [chat-sdk](https://github.com/Them-labs/manyshape-chat-sdk), [agent](https://github.com/Them-labs/manyshape-agent)). These aren't on npm yet - until they are, clone the sibling `@manyshape` repos alongside this one and link them locally (`npm link`).
 
 ```sh
 npm install
