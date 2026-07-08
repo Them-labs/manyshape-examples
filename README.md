@@ -32,5 +32,3 @@ Try it: as **jk**, type *"I live in my inbox - make it a task board. Archiving a
 | Activation gate | header parse → caps ⊆ contract → static policy scan → conformance (boots + first cap call in 8s, zero JS errors). Failure keeps the old surface live |
 | Call-time policy | `mail.send` is `gesture: true` - the authority plane rejects it without a fresh user gesture |
 | React + vanilla | Agent picks `framework:` per surface; JSX transpiled with esbuild before the gate |
-
-License: [MIT](LICENSE).
